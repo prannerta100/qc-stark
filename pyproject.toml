@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qc-hard"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.24",
+    "qiskit>=2.0",
+    "qiskit-aer>=0.13",
+    "stim>=1.12",
+    "pymatching>=2.0",
+    "networkx>=3.0",
+    "openai>=1.0",
+    "anthropic>=0.20",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov"]
+
+[project.scripts]
+qc-hard = "qc_hard.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["qc_hard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
