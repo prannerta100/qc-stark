@@ -9,7 +9,8 @@ All numbers below are computed from `results/full_benchmark_final.jsonl` (2,750 
 - **Capability dissociation is real and large.** o4-mini ranks 3rd overall (59.3%) yet scores **0%** on circuit debugging. Six of ten models score exactly 0% on debugging; last-ranked LLaMA-70B (12.0% overall) outscores all six of them on that task.
 - **Task difficulty spans 5.9x** from Equivalence Checking (78.0%) to Debugging (13.2%). Performance drops 59% from Level 1 (65.5%) to Level 5 (26.7%).
 - **Hardware routing remains unsolved** at research difficulty (mean 0.080 at Level 3+). Gemini Flash Lite (8th overall) leads the task at 44%.
-- **Psychometrically validated.** 2PL IRT marginal reliability = 0.985; ability estimates span 3.6 standard units. Gemini 3.5 Flash leads in IRT ability (theta = 1.418) while Claude Sonnet 5 leads in continuous mean accuracy (0.662) -- IRT binarizes at score > 0.5.
+- **Psychometrically validated.** A 2PL IRT model treating each of the 55 (task, level) cells as an item -- 120 parameters (10 abilities, 55 difficulties, 55 discriminations) over 2,750 responses -- places model ability and item difficulty on one logit scale. Gemini 3.5 Flash leads on IRT ability (theta = 1.122) while Claude Sonnet 5 leads on mean accuracy (0.662). 15 of the 53 identified items sit above the ablest model's ability, so the benchmark retains headroom.
+- **Rankings are robust to prompt wording.** Against a minimal prompt over the same grid (2,745 paired evaluations), Spearman rho = 0.915 and Kendall tau = 0.778. The top-4 grouping is unchanged; the bottom-4 is not.
 
 ## Tasks
 
@@ -17,7 +18,7 @@ All numbers below are computed from `results/full_benchmark_final.jsonl` (2,750 
 |---|---|---|---|
 | T1 | State Preparation | Construction | 0.496 |
 | T2 | Trotterization | Construction | 0.224 |
-| T3 | Oracle Synthesis | Construction | 0.496 |
+| T3 | Oracle Synthesis | Construction | 0.500 |
 | T4 | Debugging | Understanding | 0.132 |
 | T5 | Noise Discrimination | Understanding | 0.340 |
 | T6 | Reverse Engineering | Understanding | 0.504 |
@@ -61,18 +62,18 @@ Each line of `qc_stark_dataset.jsonl` is a JSON object with:
 
 | Rank | Model | Overall Accuracy | IRT Ability |
 |---|---|---|---|
-| 1 | Claude Sonnet 5 | 0.662 | +1.199 |
-| 2 | Gemini 3.5 Flash | 0.651 | +1.416 |
-| 3 | o4-mini | 0.593 | +0.567 |
-| 4 | GPT-5.4 | 0.535 | +0.598 |
-| 5 | Gemma-4 31B | 0.491 | +0.121 |
-| 6 | GPT-4.1-mini | 0.393 | -0.312 |
-| 7 | Claude Opus 4.1 | 0.382 | -0.529 |
-| 8 | Gemini Flash Lite | 0.367 | -0.588 |
-| 9 | Mistral Large 3 | 0.262 | -1.130 |
-| 10 | LLaMA-3.3 70B | 0.120 | -2.212 |
+| 1 | Claude Sonnet 5 | 0.662 | +1.090 |
+| 2 | Gemini 3.5 Flash | 0.651 | +1.122 |
+| 3 | o4-mini | 0.593 | +0.669 |
+| 4 | GPT-5.4 | 0.535 | +0.432 |
+| 5 | Gemma-4 31B | 0.491 | +0.251 |
+| 6 | GPT-4.1-mini | 0.393 | -0.087 |
+| 7 | Claude Opus 4.1 | 0.382 | -0.021 |
+| 8 | Gemini Flash Lite | 0.367 | -0.141 |
+| 9 | Mistral Large 3 | 0.262 | -0.843 |
+| 10 | LLaMA-3.3 70B | 0.120 | -2.473 |
 
-Gemini 3.5 Flash leads in IRT ability but ranks 2nd in accuracy -- IRT binarizes at score > 0.5, revealing a different ordering under dichotomous scoring.
+Gemini 3.5 Flash leads on IRT ability but ranks 2nd on accuracy. The orderings differ because IRT weights each item by how sharply it separates models, rather than averaging all items equally. The two are within 0.032 logits of each other, well inside their confidence intervals, so the top-2 order is not resolved by this data.
 
 ## Citation
 

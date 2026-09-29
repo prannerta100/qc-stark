@@ -112,7 +112,7 @@ Bold = best per task. *Italic* = worst overall model (llama-70b). F1 two-way tie
 | E2 VQE | +0.671 | 0.034 | Predictive |
 | F1 Equivalence | +0.448 | 0.194 | Not significant (p>0.05) |
 | G1 Trotter | +0.486 | 0.154 | Not significant (p>0.05) |
-| H1 Oracle | +0.936 | 0.000 | Highly predictive |
+| H1 Oracle | +0.915 | 0.000 | Highly predictive |
 | I1 Noise Fidelity | +0.926 | 0.000 | Highly predictive |
 | J1 Reverse Eng | +0.787 | 0.007 | Highly predictive |
 
@@ -148,42 +148,6 @@ B3 is 50/50 bug/no-bug (even seeds = bug, odd seeds = noise-only). Random baseli
 
 ---
 
-## Reasoning Effort Sweep: D1 QEC and F1 Equivalence
-
-540 records (0 API errors): o4-mini and gpt-5.4 × low/medium/high effort × 5 seeds × 3 difficulty levels × 3 reps.
-
-**Design:** D1 sweep uses 100% negative cases (no error present; correct answer = False). F1 sweep uses 100% positive cases (circuits ARE equivalent; correct answer = True). This isolates one direction of the confusion matrix — whether models intervene when they should not.
-
-### D1 QEC — no-error syndromes (correct = return False, do not intervene)
-
-| Model | Effort | N | TN (correct) | FP (wrong intervention) | Crash (invalid code) |
-|---|---|---|---|---|---|
-| o4-mini | low | 45 | 21 (47%) | **23 (51%)** | 1 (2%) |
-| o4-mini | medium | 45 | 33 (73%) | 12 (27%) | 0 (0%) |
-| o4-mini | high | 45 | 29 (64%) | 9 (20%) | 7 (16%) |
-| gpt-5.4 | low | 45 | 45 (100%) | 0 (0%) | 0 (0%) |
-| gpt-5.4 | medium | 45 | 40 (89%) | 0 (0%) | 5 (11%) |
-| gpt-5.4 | high | 45 | 20 (44%) | **0 (0%)** | **25 (56%)** |
-
-**o4-mini pattern:** genuine over-correction that decreases with effort (51% → 27% → 20% FP). More reasoning suppresses false interventions.
-
-**gpt-5.4 pattern:** zero genuine FPs at all effort levels. Instead, crash rate escalates with effort (0% → 11% → 56%). At high effort gpt-5.4 generates code so complex it fails to execute, rather than producing incorrect predictions. Two distinct structural failure modes.
-
-### F1 Equivalence — equivalent circuit pairs (correct = return True, confirm equivalence)
-
-| Model | Effort | N | TP (correct) | FN (missed equiv.) | Crash (invalid code) |
-|---|---|---|---|---|---|
-| o4-mini | low | 45 | 43 (96%) | 0 (0%) | 2 (4%) |
-| o4-mini | medium | 45 | 44 (98%) | 0 (0%) | 1 (2%) |
-| o4-mini | high | 45 | 41 (91%) | 1 (2%) | 3 (7%) |
-| gpt-5.4 | low | 45 | 45 (100%) | 0 (0%) | 0 (0%) |
-| gpt-5.4 | medium | 45 | 45 (100%) | 0 (0%) | 0 (0%) |
-| gpt-5.4 | high | 45 | 44 (98%) | 0 (0%) | 1 (2%) |
-
-F1 equivalence shows no effort paradox. Both models are near-ceiling at all effort levels; FN rates are negligible (≤2%). The anomalous behavior is isolated to D1 QEC.
-
----
-
 ## What's Going On: Key Observations
 
 ### 1. Claude Sonnet 5 leads overall, Gemini 3.5 Flash close behind
@@ -204,8 +168,79 @@ Near-perfect at L1 (96%) and L2 (98%), collapses to 40/26/12% at L3/L4/L5. No ot
 ### 6. Gemini 3.5 Flash: biggest budget-fix beneficiary
 Gemini 3.5 Flash was severely truncated at the original budget. After rerun at 65K tokens: I1 Noise Fidelity jumped from 0% to 100%, State Prep from 40% to 92%, overall from 30.9% to 65.1%.
 
-### 7. D1 effort paradox: two different failure modes
-o4-mini over-corrects (false positives) most severely at low effort; more reasoning suppresses false intervention. gpt-5.4 never over-corrects but generates increasingly complex, non-executing code as effort rises. The "more reasoning → more hallucination" hypothesis applies to o4-mini but manifests as code crashes for gpt-5.4.
+
+---
+
+## IRT Analysis (2PL, 55 items)
+
+A two-parameter logistic model, `P(correct) = 1 / (1 + exp(-a_j (theta_m - b_j)))`, with
+each (task, level) cell as an item and the 5 seeds as replicate trials. 120 parameters
+(10 abilities, 55 difficulties, 55 discriminations) over 2,750 responses, 50 observations
+per item. Abilities are standardised to mean 0, unit SD. Discrimination carries a
+log-normal(0, 0.5) prior; without it the 55 slopes are not identifiable from 10 models
+(unpenalised estimation fails to converge, with 20 of 55 slopes pinned at the search bounds).
+Produced by `analyze_irt_v2.py`.
+
+| Rank | Model | θ | SE | 95% CI |
+|---|---|---|---|---|
+| 1 | Gemini 3.5 Flash | +1.122 | 0.088 | [+0.949, +1.295] |
+| 2 | Claude Sonnet 5 | +1.090 | 0.088 | [+0.919, +1.262] |
+| 3 | o4-mini | +0.669 | 0.085 | [+0.502, +0.837] |
+| 4 | GPT-5.4 | +0.432 | 0.087 | [+0.262, +0.603] |
+| 5 | Gemma-4 31B | +0.251 | 0.089 | [+0.077, +0.425] |
+| 6 | Claude Opus 4.1 | −0.021 | 0.093 | [−0.203, +0.161] |
+| 7 | GPT-4.1-mini | −0.087 | 0.094 | [−0.272, +0.098] |
+| 8 | Gemini Flash Lite | −0.141 | 0.096 | [−0.328, +0.046] |
+| 9 | Mistral Large 3 | −0.843 | 0.124 | [−1.086, −0.600] |
+| 10 | LLaMA-3.3 70B | −2.473 | 0.223 | [−2.909, −2.037] |
+
+Five of nine adjacent pairs have overlapping intervals, so the ordering should be read as
+tiers rather than a strict ranking. A 60-replicate parametric bootstrap confirms the ability
+SEs (mean ratio 1.01), with one exception: LLaMA-70B's analytic SE is ~2.5× too wide, because
+the standardisation constraint pins the extreme point in a way the analytic formula ignores.
+
+Item parameters aggregated by task (mean over the 5 levels; higher difficulty = harder):
+
+| Task | Mean difficulty b̄ | Mean discrimination ā | n |
+|---|---|---|---|
+| C1 Routing | +1.897 | 0.862 | 5 |
+| B1 Debugging | +1.711 | 2.267 | 5 |
+| G1 Trotter | +1.581 | 0.987 | 5 |
+| A State Prep | +1.116 | 2.841 | 3 |
+| B3 Noise Discrim | +0.662 | 1.560 | 5 |
+| J1 Reverse Eng | +0.107 | 1.349 | 5 |
+| H1 Oracle | +0.015 | 2.824 | 5 |
+| D1 QEC Decode | −0.069 | 0.794 | 5 |
+| I1 Noise Fidelity | −0.325 | 2.526 | 5 |
+| E2 VQE | −0.917 | 1.243 | 5 |
+| F1 Equivalence | −1.272 | 1.597 | 5 |
+
+State Prep averages over 3 items, not 5: L1 and L2 were passed by every model on every seed,
+leaving their difficulty unidentified (true value −∞). Routing is the hardest task on average
+but the *least* discriminating — uniformly hard, so it separates models poorly. Debugging is
+nearly as hard yet discriminates strongly.
+
+Across the 53 identified items, difficulty spans −4.97 to +3.41 while ability spans −2.47 to
++1.12: **15 items sit above the ablest model**, so the benchmark is not saturated.
+
+---
+
+## Prompt Sensitivity
+
+`full_benchmark_final.jsonl` (structured, canonical prompt) paired against
+`sensitivity_minimal_final.jsonl` (minimal prompt) on identical (task, model, level, seed)
+keys. 2,745 usable pairs; 5 gemma-4-31b State-Prep L5 cells are excluded because the minimal
+condition could not be obtained after six retry rounds (persistent upstream 502/503).
+Produced by `analyze_prompt_sensitivity.py`.
+
+Overall accuracy rises 0.403 → 0.446 under the structured prompt. Model rankings are largely
+preserved: **Spearman ρ = 0.915, Kendall τ = 0.778**, mean absolute shift 0.051 per model.
+The top-4 grouping is identical across conditions; the bottom-4 is not — GPT-4.1-mini falls
+from 6th to 8th under the minimal prompt, displacing Opus 4.1.
+
+Largest gains from the structured prompt: o4-mini +0.113, Gemma-4 +0.107, GPT-4.1-mini +0.095.
+Flat or slightly negative: Sonnet 5 +0.000, Opus 4.1 −0.011, Gemini 3.5 Flash −0.025. By task
+the effect concentrates in QEC Decoding (+0.244); ten of eleven tasks shift by less than 0.075.
 
 ---
 
@@ -219,7 +254,8 @@ o4-mini over-corrects (false positives) most severely at low effort; more reason
 Total evaluations in the released results: **5,500** (2,750 per prompt condition).
 
 *Supporting data held outside the release (`results/archive/`, not published):
-`paradox_effort_sweep.jsonl` (540 clean records, F1/D1 null-case effort sweep) and
+`paradox_effort_sweep.jsonl` (540 clean records, F1/D1 null-case effort sweep; its
+analysis has been removed from this document) and
 `debugging_paradox_deep/` (710 records across 9 experiment files: o3, o3-mini,
 GPT-5.5, GPT-5.6-luna, Gemini 2.5-Pro, Sonnet 5). The latter is the only backing
 for the debugging-paradox figures quoted in the main text, so it must be
